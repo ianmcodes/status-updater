@@ -29,6 +29,8 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "shortDescription": "Home Assistant Status Updater",
+    "longDescription": "Desktop and system tray controller for Home Assistant input_select entities",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

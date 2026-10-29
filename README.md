@@ -56,13 +56,29 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ### Building for Production
 
-To create a release executable and installer for your OS:
+To create a local release executable and installer for your OS:
 
 ```bash
 npm run tauri build
 ```
 
 The resulting binaries will be placed in `src-tauri/target/release/`.
+
+### Automated Multi-Platform Releases (GitHub Actions)
+
+When you push a version tag (e.g. `v1.0.0`), the GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) automatically:
+1. Runs the test suite across both frontend and backend.
+2. Builds native binaries and installers for:
+   - **Windows** (`.msi` installer and `.exe` NSIS setup)
+   - **macOS** (both Apple Silicon `.dmg` and Intel `.dmg`)
+   - **Linux** (`.deb` package and `.AppImage`)
+3. Creates a new GitHub Release with all binary assets attached.
+
+To publish a new release:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ---
 

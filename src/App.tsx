@@ -450,8 +450,9 @@ export default function App() {
               {/* Entity Picker if discovered */}
               {discoveredList.length > 0 && (
                 <div className="discovered-dropdown">
-                  <label className="dropdown-label">Detected Entities:</label>
+                  <label htmlFor="detected_entities" className="dropdown-label">Detected Entities:</label>
                   <select
+                    id="detected_entities"
                     className="entity-select"
                     value={config.entity_id}
                     onChange={(e) =>

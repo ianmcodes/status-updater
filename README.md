@@ -42,6 +42,18 @@ npm install
 npm run tauri dev
 ```
 
+### Running Tests
+
+Run frontend tests (Vitest + Testing Library):
+```bash
+npm test
+```
+
+Run backend tests (Cargo test with in-memory HTTP server):
+```bash
+cargo test --manifest-path src-tauri/Cargo.toml
+```
+
 ### Building for Production
 
 To create a release executable and installer for your OS:

@@ -29,6 +29,8 @@ export default function App() {
     access_token: "",
     refresh_interval_secs: 60,
     start_minimized: false,
+    zoom_detection_enabled: false,
+    zoom_call_status: "",
   });
 
   const [entityState, setEntityState] = useState<EntityState | null>(null);
@@ -544,6 +546,44 @@ export default function App() {
                   <span>Start minimized to tray</span>
                 </label>
               </div>
+            </div>
+
+            <div className="form-group zoom-settings">
+              <label className="checkbox-label" htmlFor="zoom_detection_enabled">
+                <input
+                  id="zoom_detection_enabled"
+                  type="checkbox"
+                  checked={config.zoom_detection_enabled}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      zoom_detection_enabled: e.target.checked,
+                    })
+                  }
+                />
+                <span>Set status while I am on a Zoom call</span>
+              </label>
+              <span className="input-hint">
+                Detects active Zoom meeting windows on Windows and restores your previous status after the call.
+              </span>
+              {config.zoom_detection_enabled && (
+                <div className="zoom-status-field">
+                  <label htmlFor="zoom_call_status">Status to use during a Zoom call</label>
+                  <select
+                    id="zoom_call_status"
+                    value={config.zoom_call_status}
+                    onChange={(e) =>
+                      setConfig({ ...config, zoom_call_status: e.target.value })
+                    }
+                    required={config.zoom_detection_enabled}
+                  >
+                    <option value="">-- Choose a status --</option>
+                    {entityState?.options.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}

@@ -569,6 +569,18 @@ select:focus {
   cursor: pointer;
 }
 
+.zoom-settings {
+  padding-top: 4px;
+}
+
+.zoom-status-field {
+  margin-top: 12px;
+}
+
+.zoom-status-field label {
+  margin-bottom: 6px;
+}
+
 /* Actions */
 .form-actions {
   display: flex;

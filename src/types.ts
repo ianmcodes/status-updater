@@ -4,6 +4,8 @@ export interface AppConfig {
   access_token: string;
   refresh_interval_secs: number;
   start_minimized: boolean;
+  zoom_detection_enabled: boolean;
+  zoom_call_status: string;
 }
 
 export interface EntityState {

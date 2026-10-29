@@ -2,6 +2,7 @@ mod config;
 mod ha_client;
 mod models;
 mod tray;
+mod zoom;
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -14,6 +15,73 @@ pub struct AppState {
     pub config: Arc<RwLock<AppConfig>>,
     pub entity_state: Arc<RwLock<Option<EntityState>>>,
     pub http_client: reqwest::Client,
+    pub zoom_call: Arc<RwLock<ZoomCallState>>,
+}
+
+#[derive(Default)]
+pub struct ZoomCallState {
+    was_in_call: bool,
+    previous_option: Option<String>,
+    applied_option: Option<String>,
+}
+
+async fn sync_zoom_status(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let (enabled, meeting_option) = {
+        let config = state.config.read().await;
+        (config.zoom_detection_enabled, config.zoom_call_status.trim().to_string())
+    };
+    let is_in_call = enabled && !meeting_option.is_empty() && zoom::is_on_zoom_call();
+
+    let (entering, restore_option, applied_option) = {
+        let mut zoom_call = state.zoom_call.write().await;
+        match (zoom_call.was_in_call, is_in_call) {
+            (false, true) => {
+                zoom_call.was_in_call = true;
+                (true, None, None)
+            }
+            (true, false) => {
+                zoom_call.was_in_call = false;
+                let restore = zoom_call.previous_option.take();
+                let applied = zoom_call.applied_option.take();
+                (false, restore, applied)
+            }
+            _ => (false, None, None),
+        }
+    };
+
+    if entering {
+        let current = match refresh_state_internal(app).await {
+            Ok(current) => current,
+            Err(_) => {
+                state.zoom_call.write().await.was_in_call = false;
+                return;
+            }
+        };
+
+        if current.state == meeting_option {
+            return;
+        }
+
+        {
+            let mut zoom_call = state.zoom_call.write().await;
+            zoom_call.previous_option = Some(current.state);
+            zoom_call.applied_option = Some(meeting_option.clone());
+        }
+        if set_option_internal(app, &meeting_option).await.is_err() {
+            let mut zoom_call = state.zoom_call.write().await;
+            zoom_call.was_in_call = false;
+            zoom_call.previous_option = None;
+            zoom_call.applied_option = None;
+        }
+    } else if let (Some(restore_option), Some(applied_option)) = (restore_option, applied_option) {
+        // Do not overwrite a status the user selected manually during the call.
+        if let Ok(current) = refresh_state_internal(app).await {
+            if current.state == applied_option {
+                let _ = set_option_internal(app, &restore_option).await;
+            }
+        }
+    }
 }
 
 pub async fn refresh_state_internal(app: &AppHandle) -> Result<EntityState, String> {
@@ -104,6 +172,8 @@ async fn save_config(
         *conf = new_config.clone();
     }
 
+    sync_zoom_status(&app).await;
+
     // Refresh Home Assistant state with new configuration
     refresh_state_internal(&app).await
 }
@@ -180,6 +250,7 @@ pub fn run() {
                 config: Arc::new(RwLock::new(initial_config)),
                 entity_state: Arc::new(RwLock::new(None)),
                 http_client,
+                zoom_call: Arc::new(RwLock::new(ZoomCallState::default())),
             };
 
             app.manage(app_state);
@@ -217,6 +288,7 @@ pub fn run() {
                         last_poll = Instant::now();
                         let _ = refresh_state_internal(&poller_app).await;
                     }
+                    sync_zoom_status(&poller_app).await;
                 }
             });
 

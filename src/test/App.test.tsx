@@ -28,6 +28,8 @@ const mockConfig: AppConfig = {
   access_token: "test_token_12345",
   refresh_interval_secs: 60,
   start_minimized: false,
+  zoom_detection_enabled: false,
+  zoom_call_status: "",
 };
 
 const mockEntityState: EntityState = {
@@ -167,6 +169,21 @@ describe("App Component", () => {
     fireEvent.click(hideBtn);
 
     expect(tokenInput.type).toBe("password");
+  });
+
+  it("shows Zoom call status choices only when Zoom detection is enabled", async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Set status while I am on a Zoom call/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByLabelText(/Status to use during a Zoom call/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/Set status while I am on a Zoom call/i));
+
+    const statusSelect = screen.getByLabelText(/Status to use during a Zoom call/i) as HTMLSelectElement;
+    fireEvent.change(statusSelect, { target: { value: "Away" } });
+    expect(statusSelect.value).toBe("Away");
   });
 
   it("discovers input_select entities and selects one from dropdown", async () => {

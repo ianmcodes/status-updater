@@ -7,6 +7,10 @@ pub struct AppConfig {
     pub access_token: String,
     pub refresh_interval_secs: u64,
     pub start_minimized: bool,
+    #[serde(default)]
+    pub zoom_detection_enabled: bool,
+    #[serde(default)]
+    pub zoom_call_status: String,
 }
 
 impl Default for AppConfig {
@@ -17,6 +21,8 @@ impl Default for AppConfig {
             access_token: "".to_string(),
             refresh_interval_secs: 60,
             start_minimized: false,
+            zoom_detection_enabled: false,
+            zoom_call_status: "".to_string(),
         }
     }
 }
@@ -89,6 +95,8 @@ mod tests {
         assert_eq!(config.access_token, "");
         assert_eq!(config.refresh_interval_secs, 60);
         assert!(!config.start_minimized);
+        assert!(!config.zoom_detection_enabled);
+        assert_eq!(config.zoom_call_status, "");
     }
 
     #[test]
@@ -99,12 +107,29 @@ mod tests {
             access_token: "secret_token_123".to_string(),
             refresh_interval_secs: 30,
             start_minimized: true,
+            zoom_detection_enabled: true,
+            zoom_call_status: "In a meeting".to_string(),
         };
 
         let serialized = serde_json::to_string(&original).expect("serialize config");
         let deserialized: AppConfig = serde_json::from_str(&serialized).expect("deserialize config");
 
         assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_config_without_zoom_fields_uses_defaults() {
+        let legacy = r#"{
+            "ha_url": "http://homeassistant.local:8123",
+            "entity_id": "input_select.status",
+            "access_token": "token",
+            "refresh_interval_secs": 60,
+            "start_minimized": false
+        }"#;
+
+        let config: AppConfig = serde_json::from_str(legacy).expect("deserialize legacy config");
+        assert!(!config.zoom_detection_enabled);
+        assert_eq!(config.zoom_call_status, "");
     }
 
     #[test]

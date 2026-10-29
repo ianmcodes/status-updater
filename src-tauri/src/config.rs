@@ -123,6 +123,8 @@ mod tests {
             access_token: "test_token_abc".into(),
             refresh_interval_secs: 15,
             start_minimized: true,
+            zoom_detection_enabled: true,
+            zoom_call_status: "In a meeting".into(),
         };
 
         // Save

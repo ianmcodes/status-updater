@@ -40,7 +40,29 @@ pub fn is_on_zoom_call() -> bool {
     found
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+pub fn is_on_zoom_call() -> bool {
+    // Zoom does not expose a stable public call-state API on macOS. Its meeting
+    // windows are exposed through System Events; querying them requires the
+    // app to be allowed under macOS Accessibility/Automation privacy settings.
+    let script = r#"tell application "System Events"
+        if not (exists process "zoom.us") then return ""
+        tell process "zoom.us"
+            set windowNames to name of every window
+        end tell
+        return windowNames as text
+    end tell"#;
+    let output = std::process::Command::new("/usr/bin/osascript")
+        .args(["-e", script])
+        .output();
+    let Ok(output) = output else { return false };
+    if !output.status.success() { return false }
+    String::from_utf8_lossy(&output.stdout)
+        .split(',')
+        .any(is_zoom_meeting_window_title)
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 pub fn is_on_zoom_call() -> bool {
     false
 }

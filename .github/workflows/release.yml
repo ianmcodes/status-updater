@@ -104,6 +104,24 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Set app version from release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises';
+
+          const version = process.env.RELEASE_TAG.replace(/^v/, '');
+          if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version)) {
+            throw new Error(`Release tag must contain a semantic version, got: ${process.env.RELEASE_TAG}`);
+          }
+
+          const configPath = 'src-tauri/tauri.conf.json';
+          const config = JSON.parse(await readFile(configPath, 'utf8'));
+          config.version = version;
+          await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
+          EOF
+
       - name: Build & Publish with Tauri Action
         uses: tauri-apps/tauri-action@v0
         env:

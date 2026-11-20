@@ -42,14 +42,13 @@ pub fn is_on_zoom_call() -> bool {
 
 #[cfg(target_os = "macos")]
 pub fn is_on_zoom_call() -> bool {
-    // Zoom does not expose a stable public call-state API on macOS. Using AppleScript
-    // to query System Events has a limitation: it only sees windows on the current
-    // virtual desktop. To detect calls across all desktops, we query all windows
-    // regardless of visibility using CGWindow APIs.
+    // Zoom does not expose a stable public call-state API on macOS. Its meeting
+    // windows are exposed through System Events; querying them requires the
+    // app to be allowed under macOS Accessibility/Automation privacy settings.
     let script = r#"tell application "System Events"
         if not (exists process "zoom.us") then return ""
         tell process "zoom.us"
-            set windowNames to name of every window where visible is true or visible is false
+            set windowNames to name of every window
         end tell
         return windowNames as text
     end tell"#;

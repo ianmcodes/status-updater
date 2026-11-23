@@ -1,6 +1,7 @@
 /// Returns whether a visible window title belongs to an active Zoom meeting.
 /// Zoom's main window may remain open while idle, so it is deliberately not
 /// treated as a call.
+#[cfg(any(target_os = "windows", test))]
 pub fn is_zoom_meeting_window_title(title: &str) -> bool {
     let title = title.trim().to_ascii_lowercase();
     title.contains("zoom meeting") || title.contains("zoom webinar")
@@ -42,49 +43,15 @@ pub fn is_on_zoom_call() -> bool {
 
 #[cfg(target_os = "macos")]
 pub fn is_on_zoom_call() -> bool {
-    // Use CoreGraphics to query windows across all spaces/desktops
-    // This avoids the limitation of AppleScript/System Events which only
-    // see windows on the current desktop
-    use core_foundation::array::CFArray;
-    use core_foundation::dictionary::CFDictionary;
-    use core_foundation::base::TCFType;
-    use core_foundation::string::CFString;
-    
-    extern "C" {
-        // CGWindowListCopyWindowInfo gets all windows including those on other spaces
-        fn CGWindowListCopyWindowInfo(option: u32, relativeToWindow: u32) -> *mut std::ffi::c_void;
-    }
-    
-    const CGWINDOW_LIST_OPTION_ALL: u32 = 0;
-    
-    unsafe {
-        let window_list = CGWindowListCopyWindowInfo(CGWINDOW_LIST_OPTION_ALL, 0);
-        if window_list.is_null() {
-            return false;
-        }
-        
-        let windows = CFArray::<CFDictionary>::wrap_under_create_rule(window_list as *mut _);
-        
-        for i in 0..windows.len() {
-            if let Some(window_dict) = windows.get(i) {
-                // Try to get the window name
-                let name_key = CFString::new("kCGWindowName");
-                // The dictionary returns ItemRef to a *const c_void
-                let name_value_ref = window_dict.get(name_key.as_concrete_TypeRef() as *const _);
-                // ItemRef dereferences to the actual pointer
-                let name_ptr = *name_value_ref as *mut std::ffi::c_void;
-                if !name_ptr.is_null() {
-                    let name_str = CFString::wrap_under_create_rule(name_ptr as *mut _);
-                    let title = name_str.to_string();
-                    if is_zoom_meeting_window_title(&title) {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    
-    false
+    // Zoom launches the CptHost helper only while a meeting is active. Unlike
+    // window titles, which macOS hides from other apps without Screen Recording
+    // permission and which Accessibility only reports for the current Space,
+    // process state is independent of the active desktop and needs no permission.
+    std::process::Command::new("/usr/bin/pgrep")
+        .args(["-x", "CptHost"])
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
